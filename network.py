@@ -1,6 +1,16 @@
+import ipaddress
 import socket
 import subprocess
 import platform
+import scapy.all as scapy
+from pymongo import MongoClient, database
+
+c = MongoClient(
+    'mongodb+srv://ceadministrator:B3urH8ffZakl96ew@nemesis.aswz80g.mongodb.net/?retryWrites=true&w=majority&appName=nemesis')
+
+db = c.get_database("resources")
+collection = db.get_collection("ouiLookup")
+
 
 def check_os():
     system_name = platform.system()
@@ -48,15 +58,38 @@ def get_ip_and_subnet_linux():
                 subnet_mask = line.strip().split()[-1]
                 return ip_address, subnet_mask
     return ip_address, None
+
+
 def get_network():
     ch = check_os()
     if ch == "Windows":
         ip, subnet = get_ip_and_subnet_windows()
-        print(f"IP Address: {ip}")
-        print(f"Subnet Mask: {subnet}")
-    elif ch == "Linux":
-        ip, subnet = get_ip_and_subnet_linux()
-        print(f"IP Address: {ip}")
-        print(f"Subnet Mask: {subnet}")
+        return ip, subnet
     else:
-        print("Test")
+        ip, subnet = get_ip_and_subnet_linux()
+        return ip, subnet
+
+
+def parse_network(ip, subnet):
+    subnet_mask = sum(bin(int(x)).count('1') for x in subnet.split('.'))
+    return ip + "/" + str(subnet_mask)
+def network_discovery():
+    ip, subnet = get_network()
+    request = scapy.ARP()
+    request.pdst = parse_network(ip, subnet)
+    broadcast = scapy.Ether()
+    broadcast.dst = 'ff:ff:ff:ff:ff:ff'
+    request_broadcast = broadcast / request
+    clients = scapy.srp(request_broadcast, timeout=10, verbose=1)[0]
+    for element in clients:
+        e = "NULL"
+        try:
+            query = {element[1].hwsrc[0:8].upper(): {'$exists': 1}}
+            a = collection.find_one(query)
+            e = a[element[1].hwsrc[0:8].upper()]
+        except:
+            e = "N/A"
+        print(element[1].psrc + "   -    " + e)
+    c.close()
+
+network_discovery()
