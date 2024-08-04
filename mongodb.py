@@ -11,7 +11,7 @@ collection = db.ouiLookup
 
 
 async def do_find_one():
-    document = await db.ouiLookup.find_one({'FC:EC:DA': {'$exists': 1}})
+    document = await db.ouiLookup.find_one({'FC:61:79': {'$exists': 1}})
     pprint.pprint(document)
 
 
