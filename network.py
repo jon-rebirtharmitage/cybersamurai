@@ -92,8 +92,16 @@ def network_discovery():
         except:
             e = "N/A"
         i += 1
+        ip_db = c.get_database("engagement_test")
+        ip_collection = ip_db.get_collection("devices")
         ipdata[i] = {"IP Address": element[1].psrc, "Manufacturer": e, "MAC Address": element[1].hwsrc.upper()}
-        #print(element[1].psrc + "  -  " + e + "  -  " + element[1].hwsrc)
+        existing_document = ip_collection.find_one({"IP Address": element[1].psrc})
+        if not existing_document:
+            ip_collection.insert_one(ipdata[i])
+        try:
+            ipdata[i].pop("_id")
+        except:
+            e = "N/A"
     c.close()
     df = pd.DataFrame(ipdata).transpose()
     print(df)
