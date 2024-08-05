@@ -1,4 +1,4 @@
-import ipaddress
+import pandas as pd
 import socket
 import subprocess
 import platform
@@ -11,6 +11,7 @@ c = MongoClient(
 db = c.get_database("resources")
 collection = db.get_collection("ouiLookup")
 
+ipdata = {}
 
 def check_os():
     system_name = platform.system()
@@ -81,6 +82,7 @@ def network_discovery():
     broadcast.dst = 'ff:ff:ff:ff:ff:ff'
     request_broadcast = broadcast / request
     clients = scapy.srp(request_broadcast, timeout=10, verbose=1)[0]
+    i = 0
     for element in clients:
         e = "NULL"
         try:
@@ -89,7 +91,11 @@ def network_discovery():
             e = a[element[1].hwsrc[0:8].upper()]
         except:
             e = "N/A"
-        print(element[1].psrc + "   -    " + e)
+        i += 1
+        ipdata[i] = {"IP Address": element[1].psrc, "Manufacturer": e, "MAC Address": element[1].hwsrc.upper()}
+        #print(element[1].psrc + "  -  " + e + "  -  " + element[1].hwsrc)
     c.close()
+    df = pd.DataFrame(ipdata).transpose()
+    print(df)
 
 network_discovery()
